@@ -38,7 +38,7 @@ function run(free, done) {
     if (free instanceof Pure) {
       done(free.a)
       break
-    } else { // Impure
+    } else if (free instanceof Impure) {
       let m = free.m()
       if (m instanceof ReadLine) {
         rl.once('line', (line) => run(m.cont(line), done))
@@ -46,6 +46,22 @@ function run(free, done) {
       } else {
         console.log(m.s)
         free = m.a // tail recursion
+      }
+    } else { // FlatMap
+      let {s, f} = free
+      if (s instanceof Pure) {
+        free = f(s.a)
+      } else if (s instanceof Impure) {
+        let sm = s.m()
+        if (sm instanceof ReadLine) {
+          rl.once('line', (line) => run(sm.cont(line).flatMap(f), done))
+          break
+        } else {
+          console.log(sm.s)
+          free = f(sm.a)
+        }
+      } else { // FlatMap
+        free = s.s.flatMap((a) => s.f(a).flatMap(f))
       }
     }
   }
